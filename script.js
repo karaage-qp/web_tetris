@@ -1,10 +1,15 @@
 const canvas = document.getElementById('tetris');
 const context = canvas.getContext('2d');
-
-// 描画サイズ設定（1ブロック = 20px、フィールド 12x20）
 context.scale(20, 20);
 
-// テトリミノの色
+// NEXT表示用キャンバスの設定
+const nextCanvas = document.getElementById('next');
+const nextContext = nextCanvas.getContext('2d');
+nextContext.scale(20, 20);
+
+const overlay = document.getElementById('game-over-overlay');
+const restartBtn = document.getElementById('restart-btn');
+
 const colors = [
   null,
   '#FF0D72', // T
@@ -16,7 +21,6 @@ const colors = [
   '#3877FF', // O
 ];
 
-// テトリミノの形状データ
 function createPiece(type) {
   if (type === 'I') {
     return [
@@ -63,7 +67,11 @@ function createPiece(type) {
   }
 }
 
-// フィールド作成 (幅12, 高さ20)
+function getRandomPieceType() {
+  const pieces = 'ILJOTSZ';
+  return pieces[pieces.length * Math.random() | 0];
+}
+
 function createMatrix(w, h) {
   const matrix = [];
   while (h--) {
@@ -77,11 +85,13 @@ const arena = createMatrix(12, 20);
 const player = {
   pos: {x: 0, y: 0},
   matrix: null,
+  nextMatrix: null,
   score: 0,
   lines: 0,
 };
 
-// 衝突判定
+let isGameOver = false;
+
 function collide(arena, player) {
   const [m, o] = [player.matrix, player.pos];
   for (let y = 0; y < m.length; ++y) {
@@ -95,7 +105,6 @@ function collide(arena, player) {
   return false;
 }
 
-// 固まったブロックをフィールドに記録
 function merge(arena, player) {
   player.matrix.forEach((row, y) => {
     row.forEach((value, x) => {
@@ -106,7 +115,6 @@ function merge(arena, player) {
   });
 }
 
-// 行の削除チェックとスコア計算
 function arenaSweep() {
   let rowCount = 1;
   outer: for (let y = arena.length - 1; y >= 0; --y) {
@@ -126,7 +134,6 @@ function arenaSweep() {
   updateScore();
 }
 
-// 行列の回転
 function rotate(matrix, dir) {
   for (let y = 0; y < matrix.length; ++y) {
     for (let x = 0; x < y; ++x) {
@@ -140,8 +147,8 @@ function rotate(matrix, dir) {
   }
 }
 
-// プレイヤーの回転（壁すり抜け防止補正付き）
 function playerRotate(dir) {
+  if (isGameOver) return;
   const pos = player.pos.x;
   let offset = 1;
   rotate(player.matrix, dir);
@@ -156,31 +163,39 @@ function playerRotate(dir) {
   }
 }
 
-// ピースの横移動
 function playerMove(dir) {
+  if (isGameOver) return;
   player.pos.x += dir;
   if (collide(arena, player)) {
     player.pos.x -= dir;
   }
 }
 
-// ピースの生成・ゲームオーバー判定
+// ピースのセット・生成処理
 function playerReset() {
-  const pieces = 'ILJOTSZ';
-  player.matrix = createPiece(pieces[pieces.length * Math.random() | 0]);
+  // 初回呼び出し時にNEXTミノを作成
+  if (!player.nextMatrix) {
+    player.nextMatrix = createPiece(getRandomPieceType());
+  }
+
+  // NEXTミノを現在のミノに設定し、新しいNEXTミノを決定
+  player.matrix = player.nextMatrix;
+  player.nextMatrix = createPiece(getRandomPieceType());
+
   player.pos.y = 0;
   player.pos.x = (arena[0].length / 2 | 0) - (player.matrix[0].length / 2 | 0);
 
+  // 出現直後に衝突した場合はゲームオーバー
   if (collide(arena, player)) {
-    arena.forEach(row => row.fill(0));
-    player.score = 0;
-    player.lines = 0;
-    updateScore();
+    isGameOver = true;
+    overlay.classList.remove('hidden');
   }
+
+  drawNext();
 }
 
-// 落下処理
 function playerDrop() {
+  if (isGameOver) return;
   player.pos.y++;
   if (collide(arena, player)) {
     player.pos.y--;
@@ -191,8 +206,8 @@ function playerDrop() {
   dropCounter = 0;
 }
 
-// 一気に一番下まで落とす（ハードドロップ）
 function playerHardDrop() {
+  if (isGameOver) return;
   while (!collide(arena, player)) {
     player.pos.y++;
   }
@@ -203,25 +218,39 @@ function playerHardDrop() {
   dropCounter = 0;
 }
 
-// 描画処理
+// メインフィールド描画
 function draw() {
   context.fillStyle = '#000';
   context.fillRect(0, 0, canvas.width, canvas.height);
 
-  drawMatrix(arena, {x: 0, y: 0});
-  drawMatrix(player.matrix, player.pos);
+  drawMatrix(context, arena, {x: 0, y: 0});
+  if (!isGameOver) {
+    drawMatrix(context, player.matrix, player.pos);
+  }
 }
 
-function drawMatrix(matrix, offset) {
+// NEXT画面描画
+function drawNext() {
+  nextContext.fillStyle = '#000';
+  nextContext.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
+
+  // NEXTキャンバスの中央付近に配置されるようにオフセット計算
+  const offsetX = (4 - player.nextMatrix[0].length) / 2;
+  const offsetY = (4 - player.nextMatrix.length) / 2;
+
+  drawMatrix(nextContext, player.nextMatrix, {x: offsetX, y: offsetY});
+}
+
+function drawMatrix(ctx, matrix, offset) {
   matrix.forEach((row, y) => {
     row.forEach((value, x) => {
       if (value !== 0) {
-        context.fillStyle = colors[value];
-        context.fillRect(x + offset.x, y + offset.y, 1, 1);
+        ctx.fillStyle = colors[value];
+        ctx.fillRect(x + offset.x, y + offset.y, 1, 1);
         
-        context.lineWidth = 0.05;
-        context.strokeStyle = '#000';
-        context.strokeRect(x + offset.x, y + offset.y, 1, 1);
+        ctx.lineWidth = 0.05;
+        ctx.strokeStyle = '#000';
+        ctx.strokeRect(x + offset.x, y + offset.y, 1, 1);
       }
     });
   });
@@ -232,12 +261,30 @@ function updateScore() {
   document.getElementById('lines').innerText = player.lines;
 }
 
-// ゲームループ
+// ゲーム再スタート処理
+function restartGame() {
+  arena.forEach(row => row.fill(0));
+  player.score = 0;
+  player.lines = 0;
+  isGameOver = false;
+  player.nextMatrix = null;
+  
+  overlay.classList.add('hidden');
+  
+  updateScore();
+  playerReset();
+  update();
+}
+
+restartBtn.addEventListener('click', restartGame);
+
 let dropCounter = 0;
 let dropInterval = 1000;
 let lastTime = 0;
 
 function update(time = 0) {
+  if (isGameOver) return;
+
   const deltaTime = time - lastTime;
   lastTime = time;
 
@@ -250,15 +297,16 @@ function update(time = 0) {
   requestAnimationFrame(update);
 }
 
-// キー入力イベント
 document.addEventListener('keydown', event => {
-  if (event.keyCode === 37) { // Left Arrow
+  if (isGameOver) return;
+
+  if (event.keyCode === 37) { // Left
     playerMove(-1);
-  } else if (event.keyCode === 39) { // Right Arrow
+  } else if (event.keyCode === 39) { // Right
     playerMove(1);
-  } else if (event.keyCode === 40) { // Down Arrow
+  } else if (event.keyCode === 40) { // Down
     playerDrop();
-  } else if (event.keyCode === 38 || event.keyCode === 88) { // Up Arrow or X
+  } else if (event.keyCode === 38 || event.keyCode === 88) { // Up or X
     playerRotate(1);
   } else if (event.keyCode === 90) { // Z
     playerRotate(-1);
@@ -267,7 +315,7 @@ document.addEventListener('keydown', event => {
   }
 });
 
-// 初期化と開始
+// 初期化
 playerReset();
 updateScore();
 update();
