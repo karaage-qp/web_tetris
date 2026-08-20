@@ -3,19 +3,36 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>テトリス</title>
+  <title>JavaScript テトリス</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
   <h1>TETRIS</h1>
   <div class="container">
-    <canvas id="tetris" width="240" height="400"></canvas>
+    <!-- メインゲーム画面 -->
+    <div class="game-area">
+      <canvas id="tetris" width="240" height="400"></canvas>
+      
+      <!-- ゲームオーバー画面（初期は非表示） -->
+      <div id="game-over-overlay" class="overlay hidden">
+        <h2>GAME OVER</h2>
+        <button id="restart-btn">リスタート</button>
+      </div>
+    </div>
+
+    <!-- 右側サイドバー -->
     <div class="info">
+      <div class="next-box">
+        <p>NEXT</p>
+        <canvas id="next" width="80" height="80"></canvas>
+      </div>
+
       <div class="score-board">
         <div>SCORE<br><span id="score">0</span></div>
         <div>LINES<br><span id="lines">0</span></div>
       </div>
+
       <div class="controls">
         <p>操作方法:</p>
         <p><span>←</span> <span>→</span> : 移動</p>
