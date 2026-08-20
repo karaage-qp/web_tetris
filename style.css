@@ -23,9 +23,56 @@ h1 {
   box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
 
-canvas {
+.game-area {
+  position: relative;
+  width: 240px;
+  height: 400px;
+}
+
+canvas#tetris {
   border: 2px solid #333;
   background-color: #000;
+}
+
+/* ゲームオーバー表示用のオーバーレイ */
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  border-radius: 2px;
+}
+
+.overlay.hidden {
+  display: none;
+}
+
+.overlay h2 {
+  color: #ff4757;
+  margin-bottom: 20px;
+  font-size: 1.8rem;
+}
+
+.overlay button {
+  padding: 10px 20px;
+  font-size: 1rem;
+  font-weight: bold;
+  color: #fff;
+  background-color: #2ed573;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.overlay button:hover {
+  background-color: #26af5f;
 }
 
 .info {
@@ -35,12 +82,27 @@ canvas {
   min-width: 120px;
 }
 
+.next-box {
+  text-align: center;
+}
+
+.next-box p {
+  margin: 0 0 5px 0;
+  font-size: 0.9rem;
+  color: #aaa;
+}
+
+#next {
+  border: 2px solid #333;
+  background-color: #000;
+}
+
 .score-board {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
 }
 
 .score-board div {
-  margin-bottom: 15px;
+  margin-bottom: 10px;
 }
 
 .score-board span {
@@ -49,14 +111,14 @@ canvas {
 }
 
 .controls {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: #aaa;
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
 .controls span {
   color: #fff;
   background: #333;
-  padding: 2px 6px;
+  padding: 2px 5px;
   border-radius: 3px;
 }
